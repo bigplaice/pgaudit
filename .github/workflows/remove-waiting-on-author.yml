@@ -1,0 +1,64 @@
+name: Remove waiting-on-author when author responds
+
+on:
+  # Conversation 普通评论
+  issue_comment:
+    types: [created]
+  # 行内 review 评论
+  pull_request_review_comment:
+    types: [created]
+  # 作者推送新 commit
+  pull_request:
+    types: [synchronize]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  remove-label:
+    # 仅在「带标签 + 操作者是作者」时运行
+    if: |
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request != null &&
+        github.event.issue.state == 'open' &&
+        contains(join(github.event.issue.labels.*.name, ','), 'waiting-on-author') &&
+        github.event.comment.user.login == github.event.issue.user.login &&
+        github.event.comment.user.type != 'Bot'
+      ) || (
+        github.event_name == 'pull_request_review_comment' &&
+        github.event.pull_request.state == 'open' &&
+        contains(join(github.event.pull_request.labels.*.name, ','), 'waiting-on-author') &&
+        github.event.comment.user.login == github.event.pull_request.user.login
+      ) || (
+        github.event_name == 'pull_request' &&
+        github.event.action == 'synchronize' &&
+        github.event.pull_request.state == 'open' &&
+        contains(join(github.event.pull_request.labels.*.name, ','), 'waiting-on-author') &&
+        github.event.sender.login == github.event.pull_request.user.login
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove waiting-on-author label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const LABEL = 'waiting-on-author';
+            const issue_number =
+              context.payload.issue?.number ||
+              context.payload.pull_request.number;
+
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number,
+                name: LABEL
+              });
+              console.log(`Removed "${LABEL}" from #${issue_number}`);
+            } catch (e) {
+              // 404：标签已不存在，忽略
+              if (e.status !== 404) throw e;
+              console.log(`Label already absent on #${issue_number}`);
+            }
