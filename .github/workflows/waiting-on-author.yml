@@ -9,7 +9,7 @@ on:
       days_threshold:
         description: '天数阈值（测试时可填 0 或 1）'
         required: false
-        default: '0'
+        default: '1'
 
 permissions:
   contents: read
