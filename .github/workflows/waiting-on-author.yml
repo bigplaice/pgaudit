@@ -22,13 +22,13 @@ jobs:
     steps:
       - name: Scan open PRs
         uses: actions/github-script@v7
+        env:
+          DAYS_THRESHOLD: ${{ github.event.inputs.days_threshold || '15' }}
         with:
           script: |
             // ---------- 配置 ----------
-            const DAYS_THRESHOLD = parseInt(
-              String${{ github.event.inputs.days_threshold || 15 }},
-              10
-            );
+            const DAYS_THRESHOLD = parseInt(process.env.DAYS_THRESHOLD || '15', 10);
+            console.log(`DAYS_THRESHOLD = ${DAYS_THRESHOLD}`);
             const LABEL = 'waiting-on-author';
             const msPerDay = 24 * 60 * 60 * 1000;
             const now = Date.now();
