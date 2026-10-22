@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * postgres.c
+ * postgres.c --nsj
  *	  POSTGRES C Backend Interface
  *
  * Portions Copyright (c) 1996-2024, PostgreSQL Global Development Group
