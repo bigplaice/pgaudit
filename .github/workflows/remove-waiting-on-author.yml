@@ -43,6 +43,8 @@ jobs:
       - name: Remove waiting-on-author label
         uses: actions/github-script@v7
         with:
+        # 关键：用有写权限的 PAT，否则 fork PR 上 GITHUB_TOKEN 只读
+          github-token: ${{ secrets.LABEL_TOKEN }}
           script: |
             const LABEL = 'waiting-on-author';
             const issue_number =
