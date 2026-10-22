@@ -1,13 +1,10 @@
 name: Remove waiting-on-author when author responds
 
 on:
-  # Conversation 普通评论
   issue_comment:
     types: [created]
-  # 行内 review 评论
   pull_request_review_comment:
     types: [created]
-  # 作者推送新 commit
   pull_request:
     types: [synchronize]
 
@@ -17,7 +14,6 @@ permissions:
 
 jobs:
   remove-label:
-    # 仅在「带标签 + 操作者是作者」时运行
     if: |
       (
         github.event_name == 'issue_comment' &&
@@ -43,13 +39,16 @@ jobs:
       - name: Remove waiting-on-author label
         uses: actions/github-script@v7
         with:
-        # 关键：用有写权限的 PAT，否则 fork PR 上 GITHUB_TOKEN 只读
-          github-token: ${{ secrets.LABEL_TOKEN }}
+          # 优先用 PAT；若 secret 未配置则回退到 GITHUB_TOKEN（同仓 PR 可用）
+          github-token: ${{ secrets.LABEL_TOKEN || github.token }}
           script: |
             const LABEL = 'waiting-on-author';
             const issue_number =
               context.payload.issue?.number ||
               context.payload.pull_request.number;
+
+            const tokenSource = process.env.GITHUB_TOKEN ? 'token-present' : 'token-missing';
+            console.log(`Using token (${tokenSource}), issue #${issue_number}`);
 
             try {
               await github.rest.issues.removeLabel({
@@ -60,7 +59,10 @@ jobs:
               });
               console.log(`Removed "${LABEL}" from #${issue_number}`);
             } catch (e) {
-              // 404：标签已不存在，忽略
-              if (e.status !== 404) throw e;
-              console.log(`Label already absent on #${issue_number}`);
+              if (e.status === 404) {
+                console.log(`Label already absent on #${issue_number}`);
+              } else {
+                console.error(`removeLabel failed: status=${e.status} message=${e.message}`);
+                throw e;
+              }
             }
